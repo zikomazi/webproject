@@ -1,0 +1,65 @@
+# ============================================================
+#  Optimisations de performance pour l'accès réseau (LAN)
+#  Compression + cache navigateur des fichiers statiques
+#  (Bootstrap, icônes, CSS) : réduit fortement le temps de
+#  chargement depuis les autres postes du réseau.
+# ============================================================
+
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json
+    AddOutputFilterByType DEFLATE font/woff font/woff2
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css                "access plus 1 month"
+    ExpiresByType application/javascript   "access plus 1 month"
+    ExpiresByType font/woff2               "access plus 1 year"
+    ExpiresByType font/woff                "access plus 1 year"
+    ExpiresByType image/png                "access plus 1 month"
+    ExpiresByType image/jpeg               "access plus 1 month"
+</IfModule>
+
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|woff2?|png|jpe?g|svg)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+</IfModule>
+
+# ============================================================
+#  IMPORTANT : upload_max_filesize et post_max_size ne peuvent PAS
+#  être modifiés par le code PHP (ini_set) — ce sont des réglages
+#  lus par Apache/PHP AVANT que le script ne s'exécute. C'est donc
+#  ICI, au niveau du serveur, qu'il faut les changer.
+#  Si ces lignes n'ont aucun effet (upload toujours bloqué), c'est
+#  que "AllowOverride" est désactivé pour ce dossier dans httpd.conf :
+#  il faut alors éditer C:\xampp\php\php.ini directement (mêmes
+#  valeurs) et redémarrer Apache.
+# ============================================================
+<IfModule mod_php.c>
+    php_value upload_max_filesize 20M
+    php_value post_max_size 25M
+    php_value max_execution_time 120
+    php_value max_input_time 120
+    php_value memory_limit 256M
+</IfModule>
+
+# Empêche l'accès direct aux dossiers sensibles depuis le navigateur
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
+
+# ============================================================
+#  Empêche l'appel direct par URL des fichiers techniques
+#  (config, permissions, session_timer) : ils ne doivent être
+#  chargés que par un require depuis un autre script PHP.
+# ============================================================
+<FilesMatch "^(config|permissions|session_timer)\.php$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
